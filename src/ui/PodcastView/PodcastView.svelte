@@ -267,7 +267,7 @@
                 {/if}
             </svelte:fragment>
         </EpisodeList>
-    {#if $viewState === ViewState.PodcastGrid}
+    {:else if $viewState === ViewState.PodcastGrid}
         <div style="margin-bottom: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
             <Text
                 placeholder="Search podcasts"
