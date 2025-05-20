@@ -59,6 +59,11 @@ export default class FeedParser {
 		const linkEl = body.querySelector("link");
 		const itunesImageEl = body.querySelector("image");
 
+    	const response = await fetch(url);
+    	const xmlString = await response.text();
+    	const parser = new DOMParser();
+    	const doc = parser.parseFromString(xmlString, "application/xml");
+
 		if (!titleEl || !linkEl) {
 			throw new Error("Invalid RSS feed");
 		}
@@ -69,10 +74,14 @@ export default class FeedParser {
 			itunesImageEl?.querySelector("url")?.textContent ||
 			"";
 
+		const categoryElements = Array.from(doc.getElementsByTagName("podcast:category"));
+        const tags = categoryElements.map(el => el.textContent ?? "").filter(Boolean);
+
 		return {
 			title,
 			url,
 			artworkUrl,
+			tags,
 		};
 	}
 

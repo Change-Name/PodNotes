@@ -3,4 +3,5 @@ export interface PodcastFeed {
 	url: string;
 	artworkUrl: string;
 	collectionId?: string;
+	tags?: string[];
 }

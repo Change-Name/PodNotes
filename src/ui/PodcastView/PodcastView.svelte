@@ -28,6 +28,7 @@
     import spawnEpisodeContextMenu from "./spawnEpisodeContextMenu";
     import Text from "../obsidian/Text.svelte";
     import Fuse from "fuse.js";
+    import Select from "../obsidian/Select.svelte";
 
     let feeds: PodcastFeed[] = [];
     let selectedFeed: PodcastFeed | null = null;
@@ -37,17 +38,24 @@
     let latestEpisodes: Episode[] = [];
 
     let podcastSearchQuery = "";
-    $: filteredFeeds = podcastSearchQuery.length
-        ? new Fuse(feeds, {
-              shouldSort: true,
-              findAllMatches: true,
-              threshold: 0.4,
-              isCaseSensitive: false,
-              keys: ['title']
-          })
-              .search(podcastSearchQuery)
-              .map(r => r.item)
-        : feeds;
+    let selectedTag: string = "";
+    let allTags: string[] = [];
+    $: filteredFeeds = feeds
+        // Tag filter
+        .filter(feed => !selectedTag || (feed.tags && feed.tags.includes(selectedTag)))
+        // Title text search (if any)
+        .filter(feed => {
+            if (!podcastSearchQuery) return true;
+            const fuse = new Fuse([feed], {
+                keys: ['title'],
+                threshold: 0.4,
+                isCaseSensitive: false,
+            });
+            return fuse.search(podcastSearchQuery).length > 0;
+        });
+
+    // Compute all unique tags from feeds
+    $: allTags = Array.from(new Set(feeds.flatMap(feed => feed.tags ?? []))).sort();
 
     onMount(async () => {
         const unsubscribePlaylists = playlists.subscribe((pl) => {
@@ -259,12 +267,19 @@
                 {/if}
             </svelte:fragment>
         </EpisodeList>
-    {:else if $viewState === ViewState.PodcastGrid}
-        <div style="margin-bottom: 1rem;">
+    {#if $viewState === ViewState.PodcastGrid}
+        <div style="margin-bottom: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
             <Text
                 placeholder="Search podcasts"
                 bind:value={podcastSearchQuery}
-                style={{ width: "100%" }}
+                style={{ flex: "2 1 250px" }}
+            />
+            <Select
+                options={["", ...allTags]}
+                bind:value={selectedTag}
+                style={{ flex: "1 1 200px", minWidth: "150px" }}
+                placeholder="Filter by tag"
+                label="Tag"
             />
         </div>
         <PodcastGrid
