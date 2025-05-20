@@ -59,10 +59,25 @@ export default class FeedParser {
 		const linkEl = body.querySelector("link");
 		const itunesImageEl = body.querySelector("image");
 
-    	const response = await fetch(url);
-    	const xmlString = await response.text();
-    	const parser = new DOMParser();
-    	const doc = parser.parseFromString(xmlString, "application/xml");
+        let response: Response;
+        try {
+            response = await fetch(url, { mode: "no-cors" });
+        } catch (err) {
+            throw new Error("Failed to fetch podcast feed. " + (err instanceof Error ? err.message : String(err)));
+        }
+
+        // When mode: 'no-cors' is used, response.ok is false and body is opaque.
+        // We have to handle this gracefully. If response cannot be read, fallback to previous behavior.
+        let xmlString = "";
+        try {
+            xmlString = await response.text();
+        } catch (err) {
+            // Fallback: try XMLHttpRequest as a last resort (works in some desktop environments)
+            xmlString = await legacyFetchXml(url);
+        }
+
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(xmlString, "application/xml");
 
 		if (!titleEl || !linkEl) {
 			throw new Error("Invalid RSS feed");
@@ -74,8 +89,8 @@ export default class FeedParser {
 			itunesImageEl?.querySelector("url")?.textContent ||
 			"";
 
-		const categoryElements = Array.from(doc.getElementsByTagName("podcast:category"));
-        const tags = categoryElements.map(el => el.textContent ?? "").filter(Boolean);
+        const categoryElements = Array.from(doc.getElementsByTagName("podcast:category"));
+        const tags = categoryElements.map((el) => el.textContent ?? "").filter(Boolean);
 
 		return {
 			title,
@@ -141,4 +156,29 @@ export default class FeedParser {
 
 		return body;
 	}
+}
+
+// Helper for environments where fetch fails completely (Obsidian desktop, local files etc.)
+async function legacyFetchXml(url: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+        try {
+            const xhr = new XMLHttpRequest();
+            xhr.open("GET", url, true);
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200 || xhr.status === 0) {
+                        resolve(xhr.responseText);
+                    } else {
+                        reject(new Error(`Failed to fetch XML via XHR: ${xhr.status}`));
+                    }
+                }
+            };
+            xhr.onerror = function () {
+                reject(new Error("XMLHttpRequest error"));
+            };
+            xhr.send();
+        } catch (err) {
+            reject(err);
+        }
+    });
 }
