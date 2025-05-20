@@ -59,25 +59,24 @@ export default class FeedParser {
 		const linkEl = body.querySelector("link");
 		const itunesImageEl = body.querySelector("image");
 
-        let response: Response;
-        try {
-            response = await fetch(url, { mode: "no-cors" });
-        } catch (err) {
-            throw new Error("Failed to fetch podcast feed. " + (err instanceof Error ? err.message : String(err)));
-        }
+		// DEBUG: Log the body for inspection
+		console.log("feedParser: body", body);
 
-        // When mode: 'no-cors' is used, response.ok is false and body is opaque.
-        // We have to handle this gracefully. If response cannot be read, fallback to previous behavior.
-        let xmlString = "";
-        try {
-            xmlString = await response.text();
-        } catch (err) {
-            // Fallback: try XMLHttpRequest as a last resort (works in some desktop environments)
-            xmlString = await legacyFetchXml(url);
-        }
-
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(xmlString, "application/xml");
+		// --- Tag extraction: Use body, not a second doc ---
+		// Account for namespaces in querySelectorAll:
+		// Use getElementsByTagName("podcast:category"), and fallback to querySelectorAll if needed.
+		let tags: string[] = [];
+		// Try with namespace
+		const nsTags = body.getElementsByTagName("podcast:category");
+		if (nsTags && nsTags.length > 0) {
+			tags = Array.from(nsTags).map((el) => el.textContent ?? "").filter(Boolean);
+			console.log("feedParser: tags from getElementsByTagName('podcast:category')", tags);
+		} else {
+			// Fallback: try querySelectorAll with attribute selector for namespace
+			const fallbackTags = body.querySelectorAll('[nodeName="podcast:category"], category');
+			tags = Array.from(fallbackTags).map((el: any) => el.textContent ?? "").filter(Boolean);
+			console.log("feedParser: tags from fallback querySelectorAll", tags);
+		}
 
 		if (!titleEl || !linkEl) {
 			throw new Error("Invalid RSS feed");
@@ -89,8 +88,8 @@ export default class FeedParser {
 			itunesImageEl?.querySelector("url")?.textContent ||
 			"";
 
-        const categoryElements = Array.from(doc.getElementsByTagName("podcast:category"));
-        const tags = categoryElements.map((el) => el.textContent ?? "").filter(Boolean);
+		// DEBUG: Log final tags and podcast fields
+		console.log("feedParser: returning", { title, url, artworkUrl, tags });
 
 		return {
 			title,

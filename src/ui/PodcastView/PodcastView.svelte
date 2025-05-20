@@ -38,7 +38,7 @@
     let latestEpisodes: Episode[] = [];
 
     let podcastSearchQuery = "";
-    let selectedTag: string = "";
+    let selectedTag = "";
     let allTags: string[] = [];
     $: filteredFeeds = feeds
         // Tag filter
@@ -55,7 +55,11 @@
         });
 
     // Compute all unique tags from feeds
-    $: allTags = Array.from(new Set(feeds.flatMap(feed => feed.tags ?? []))).sort();
+    $: {
+        // Gather all tags from feeds, flatten, dedupe, and sort
+        allTags = Array.from(new Set(feeds.flatMap(feed => feed.tags ?? []))).sort();
+        console.log("PodcastView: allTags computed", allTags, feeds.map(f => ({ title: f.title, tags: f.tags })));
+    }
 
     onMount(async () => {
         const unsubscribePlaylists = playlists.subscribe((pl) => {
