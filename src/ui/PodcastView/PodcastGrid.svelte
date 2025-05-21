@@ -23,7 +23,7 @@
 	{/if}
 
 	{#if feeds.length > 0}
-		{#each feeds.slice().sort((a, b) => a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: "base" })) as feed}
+		{#each feeds.slice().sort((a, b) => b.title.localeCompare(a.title, undefined, { numeric: true, sensitivity: "base" })) as feed}
 			<PodcastGridCard
 				feed={feed}
 				on:clickPodcast
