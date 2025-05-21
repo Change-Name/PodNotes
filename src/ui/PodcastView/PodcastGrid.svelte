@@ -23,7 +23,18 @@
 	{/if}
 
 	{#if feeds.length > 0}
-		{#each feeds.slice().sort((a, b) => b.title.localeCompare(a.title, undefined, { numeric: true, sensitivity: "base" })) as feed}
+		{#each feeds.slice().sort((a, b) => {
+ 			const numberA = parseInt(a.title, 10);
+ 			const numberB = parseInt(b.title, 10);
+ 			const isNumA = !isNaN(numberA);
+ 			const isNumB = !isNaN(numberB);
+ 			if (isNumA && isNumB) {
+ 				return numberB - numberA || b.title.localeCompare(a.title, undefined, { numeric: true, sensitivity: "base" });
+ 			}
+ 			if (isNumA) return -1;
+ 			if (isNumB) return 1;
+ 			return b.title.localeCompare(a.title, undefined, { numeric: true, sensitivity: "base" });
+ 		}) as feed}
 			<PodcastGridCard
 				feed={feed}
 				on:clickPodcast
